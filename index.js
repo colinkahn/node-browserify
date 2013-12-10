@@ -60,6 +60,7 @@ function Browserify (opts) {
     self._exposeAll = opts.exposeAll;
     self._ignoreMissing = opts.ignoreMissing;
     self._basedir = opts.basedir;
+    self._transformKey = opts.transformKey;
     
     var noParse = [].concat(opts.noParse).filter(Boolean);
     noParse.forEach(this.noParse.bind(this));
@@ -190,8 +191,14 @@ Browserify.prototype.bundle = function (opts, cb) {
     opts.resolve = self._resolve.bind(self);
     opts.transform = self._transforms;
     opts.noParse = self._noParse;
-    opts.transformKey = [ 'browserify', 'transform' ];
-    
+    opts.transformKey = (function() {
+        if (self._transformKey === null || self._transformKey === undefined) {
+            return [ 'browserify', 'transform' ];
+        } else {
+            return transformKey
+        }
+    })();
+
     var parentFilter = opts.packageFilter;
     opts.packageFilter = function (pkg) {
         if (parentFilter) pkg = parentFilter(pkg);
