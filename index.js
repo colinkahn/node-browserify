@@ -60,6 +60,7 @@ function Browserify (opts) {
     self._exposeAll = opts.exposeAll;
     self._ignoreMissing = opts.ignoreMissing;
     self._basedir = opts.basedir;
+    self._packageFilter = opts.packageFilter;
     
     var noParse = [].concat(opts.noParse).filter(Boolean);
     noParse.forEach(this.noParse.bind(this));
@@ -99,7 +100,7 @@ Browserify.prototype.require = function (id, opts) {
     var params = {
         filename: fromfile,
         modules: builtins,
-        packageFilter: packageFilter,
+        packageFilter: makePackageFilter(this),
         extensions: self._extensions
     };
     browserResolve(id, params, function (err, file) {
@@ -195,7 +196,7 @@ Browserify.prototype.bundle = function (opts, cb) {
     var parentFilter = opts.packageFilter;
     opts.packageFilter = function (pkg) {
         if (parentFilter) pkg = parentFilter(pkg);
-        return packageFilter(pkg);
+        return makePackageFilter({})(pkg);
     };
 
     if (cb) cb = (function (f) {
@@ -462,13 +463,16 @@ Browserify.prototype.pack = function (debug, standalone) {
     }
 };
 
-var packageFilter = function (info) {
-    if (typeof info.browserify === 'string' && !info.browser) {
-        info.browser = info.browserify;
-        delete info.browserify;
-    }
-    return info;
-};
+var makePackageFilter = function(b) {
+  return function (info) {
+      if (typeof info.browserify === 'string' && !info.browser) {
+          info.browser = info.browserify;
+          delete info.browserify;
+      }
+      if (b._packageFilter) info = b._packageFilter(info)
+      return info;
+  };
+}
 
 Browserify.prototype._resolve = function (id, parent, cb) {
     if (this._ignore[id]) return cb(null, emptyModulePath);
